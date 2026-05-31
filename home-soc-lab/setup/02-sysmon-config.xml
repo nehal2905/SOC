@@ -1,0 +1,104 @@
+<!--
+  Home SOC Lab — Sysmon configuration (SwiftOnSecurity baseline + lab extensions)
+  Install: sysmon64.exe -accepteula -i 02-sysmon-config.xml
+  Update:  sysmon64.exe -c 02-sysmon-config.xml
+  https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon
+-->
+<Sysmon schemaversion="4.90">
+  <EventFiltering>
+
+    <!-- Capture hashes for integrity and IOC matching -->
+    <HashAlgorithms>sha256,imphash</HashAlgorithms>
+
+    <CheckRevocation>false</CheckRevocation>
+
+    <!-- Reduce noise: exclude known-good system processes (tune per environment) -->
+    <EventFiltering type="ProcessCreate" onmatch="exclude">
+      <Image condition="is">C:\Windows\System32\svchost.exe</Image>
+      <ParentImage condition="is">C:\Windows\System32\services.exe</ParentImage>
+      <CommandLine condition="contains">\system32\svchost.exe -k</CommandLine>
+    </EventFiltering>
+
+    <!-- PROCESS CREATE (EID 1) — execution, initial access payloads -->
+    <RuleGroup name="ProcessCreate" groupRelation="or">
+      <ProcessCreate onmatch="include">
+        <Image condition="end with">powershell.exe</Image>
+        <Image condition="end with">pwsh.exe</Image>
+        <Image condition="end with">cmd.exe</Image>
+        <Image condition="end with">wscript.exe</Image>
+        <Image condition="end with">cscript.exe</Image>
+        <Image condition="end with">mshta.exe</Image>
+        <Image condition="end with">rundll32.exe</Image>
+        <Image condition="end with">regsvr32.exe</Image>
+        <Image condition="end with">certutil.exe</Image>
+        <Image condition="end with">bitsadmin.exe</Image>
+        <ParentImage condition="contains">\Users\</ParentImage>
+        <CommandLine condition="contains">-EncodedCommand</CommandLine>
+        <CommandLine condition="contains">DownloadString</CommandLine>
+        <CommandLine condition="contains">IEX</CommandLine>
+        <CommandLine condition="contains">FromBase64String</CommandLine>
+      </ProcessCreate>
+    </RuleGroup>
+
+    <!-- NETWORK (EID 3) — exfiltration, C2 -->
+    <RuleGroup name="NetworkConnect" groupRelation="or">
+      <NetworkConnect onmatch="include">
+        <DestinationIp condition="is not">127.0.0.1</DestinationIp>
+        <DestinationIp condition="is not">::1</DestinationIp>
+        <Initiated condition="is">true</Initiated>
+      </NetworkConnect>
+    </RuleGroup>
+
+    <!-- IMAGE LOAD (EID 7) — DLL sideloading -->
+    <RuleGroup name="ImageLoad" groupRelation="or">
+      <ImageLoad onmatch="include">
+        <Signed condition="is">false</Signed>
+        <Image condition="end with">powershell.exe</Image>
+      </ImageLoad>
+    </RuleGroup>
+
+    <!-- FILE CREATE (EID 11) — dropped payloads -->
+    <RuleGroup name="FileCreate" groupRelation="or">
+      <FileCreate onmatch="include">
+        <TargetFilename condition="contains">\Downloads\</TargetFilename>
+        <TargetFilename condition="contains">\AppData\</TargetFilename>
+        <TargetFilename condition="contains">\Temp\</TargetFilename>
+        <TargetFilename condition="end with">.exe</TargetFilename>
+        <TargetFilename condition="end with">.dll</TargetFilename>
+        <TargetFilename condition="end with">.ps1</TargetFilename>
+        <TargetFilename condition="end with">.bat</TargetFilename>
+      </FileCreate>
+    </RuleGroup>
+
+    <!-- REGISTRY (EID 12/13) — persistence -->
+    <RuleGroup name="RegistryEvent" groupRelation="or">
+      <RegistryEvent onmatch="include">
+        <TargetObject condition="contains">\CurrentVersion\Run</TargetObject>
+        <TargetObject condition="contains">\CurrentVersion\RunOnce</TargetObject>
+        <TargetObject condition="contains">\Services\</TargetObject>
+        <TargetObject condition="contains">TaskCache</TargetObject>
+      </RegistryEvent>
+    </RuleGroup>
+
+    <!-- DNS (EID 22) — exfil over DNS (optional) -->
+    <RuleGroup name="DnsQuery" groupRelation="or">
+      <DnsQuery onmatch="include">
+        <QueryName condition="end with">.local</QueryName>
+      </DnsQuery>
+      <DnsQuery onmatch="exclude">
+        <QueryName condition="end with">.microsoft.com</QueryName>
+        <QueryName condition="end with">.windows.com</QueryName>
+      </DnsQuery>
+    </RuleGroup>
+
+    <!-- PROCESS ACCESS (EID 10) — credential / token abuse -->
+    <RuleGroup name="ProcessAccess" groupRelation="or">
+      <ProcessAccess onmatch="include">
+        <TargetImage condition="end with">lsass.exe</TargetImage>
+        <GrantedAccess condition="contains">0x1010</GrantedAccess>
+        <GrantedAccess condition="contains">0x1410</GrantedAccess>
+      </ProcessAccess>
+    </RuleGroup>
+
+  </EventFiltering>
+</Sysmon>

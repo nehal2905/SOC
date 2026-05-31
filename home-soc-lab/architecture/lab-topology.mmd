@@ -1,0 +1,27 @@
+%% Home SOC Lab — Network + Data Flow
+%% Export: mmdc -i lab-topology.mmd -o lab-topology.png
+%% Or paste into https://mermaid.live
+
+flowchart TB
+    subgraph HostOnly["Host-Only Network 192.168.56.0/24"]
+        Kali["Kali Linux<br/>Attacker<br/>192.168.56.20"]
+        Win["Windows 10/11 Victim<br/>192.168.56.10<br/>Sysmon + Event Logs"]
+        SIEM["Splunk / Wazuh SIEM<br/>192.168.56.30"]
+    end
+
+    Host["Physical Host<br/>NOT bridged to LAN"]
+    Host -.->|VirtualBox/VMware| HostOnly
+
+    Kali -->|"Attack chain<br/>SMB, WinRM, HTTP, PS"| Win
+
+    Win -->|"Sysmon EID 1,3,7,11,12,13,22<br/>Win Security 4688,4698,4672"| UF["Log Forwarder<br/>Splunk UF or Wazuh Agent"]
+    UF -->|"TCP 9997 or 1514"| SIEM
+
+    SIEM --> Rules["Detection Rules<br/>MITRE-mapped"]
+    Rules --> Dash["Dashboards & Alerts"]
+    Rules --> IR["Incident Response<br/>Playbooks"]
+
+    style Kali fill:#c0392b,color:#fff
+    style Win fill:#2980b9,color:#fff
+    style SIEM fill:#27ae60,color:#fff
+    style Host fill:#7f8c8d,color:#fff
