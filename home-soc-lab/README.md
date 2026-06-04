@@ -76,6 +76,33 @@ Full **attack → detect → respond** sequence: `architecture/attack-detect-res
 6. **Validate detections** — Confirm rules in `detections/detection-rules.md` fire; capture screenshots.
 7. **Respond** — Practice `response/incident-response.md` for each alert.
 
+## Project Results
+
+### Detections Implemented and Validated
+
+| Category       | Detection ID | Status      |
+| -------------- | ------------ | ----------- |
+| Execution      | DET-EX-001   | ✅ Validated |
+| Execution      | DET-EX-002   | ✅ Validated |
+| Initial Access | DET-IA-001   | ✅ Validated |
+| Persistence    | DET-PE-001   | ✅ Validated |
+| Exfiltration   | DET-EXF-001  | ✅ Validated |
+
+### SIEM Dashboard
+
+The Home SOC Dashboard was created in Splunk and includes:
+
+* Top Processes
+* Security Event Distribution
+* Recent Security Events
+* Detection Alert Activity
+* MITRE ATT&CK Coverage
+
+### Alerting
+
+Custom Splunk alerts were configured to trigger on validated detections and generate analyst-visible alerts for investigation and response.
+
+
 ## Attack → Detect → Respond (Summary)
 
 | Stage | Attack (example) | Detection signal | Response |
